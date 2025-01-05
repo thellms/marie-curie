@@ -16,3 +16,4 @@ query_jsons
 __pycache__/
 *.csv
 tests/search_engines/crossref.ipynb
+__pycache__/
