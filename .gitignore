@@ -1,0 +1,15 @@
+.env
+cache
+caches
+all-outputs
+all-caches
+pdfs
+llm_logs
+dbs
+bups
+parsed_pdfs
+query_jsons
+*.jsonl
+*.pkl
+*.db
+*.log
