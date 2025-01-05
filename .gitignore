@@ -13,3 +13,5 @@ query_jsons
 *.pkl
 *.db
 *.log
+__pycache__/
+*.csv
