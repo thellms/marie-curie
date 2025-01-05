@@ -15,3 +15,4 @@ query_jsons
 *.log
 __pycache__/
 *.csv
+tests/search_engines/crossref.ipynb
