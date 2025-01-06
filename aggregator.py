@@ -16,7 +16,7 @@ from grader import grade_paper
 from download_pdfs import download_pdfs
 from parse_manager import parse_pdfs_in_directory
 from aggregator_utils import aggregate_subquery_results, unify_final_df
-from pdf_utils import unify_pdf_urls  # <-- import from pdf_utils, not aggregator_utils
+from pdf_utils import unify_pdf_urls  # note we import from pdf_utils
 
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
@@ -36,18 +36,27 @@ async def run_pipeline(user_query: str, parser_method: str, output_filename: str
       4) Grade (LLM), store in DB, skip duplicates
       5) Download + parse PDFs using the chosen parser method
     """
+    # 1) Decompose the user query via queries.py
     results = query_chain.invoke({"query": user_query})
-    sub_queries = results.queries  # list of sub-queries
+    logging.info(f"Decomposed query into sub-queries: {results.queries}")
+    sub_queries = results.queries  # list of sub-queries from the LLM
+    # e.g. ["\"Neanderthal carnivores\"", "\"Pleistocene carnivores\"", "\"Neanderthal diet\""]
 
+    # 2) Create DB if needed
     create_database()
     conn = sqlite3.connect("research_papers.db")
 
     try:
-        tasks = [aggregate_subquery_results(q) for q in sub_queries]
+        # 3) aggregator logic for each sub-query, but run it in background threads
+        tasks = [
+            asyncio.to_thread(aggregate_subquery_results, q)
+            for q in sub_queries
+        ]
+        # Now gather the results, each is a DataFrame
         dfs = await asyncio.gather(*tasks)
         merged_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
-        # optional final unify step
+        # optional unify step
         merged_df = unify_final_df(merged_df)
 
         logging.info("Grading papers for relevance...")
@@ -60,6 +69,7 @@ async def run_pipeline(user_query: str, parser_method: str, output_filename: str
         relevant_df.to_pickle(output_filename)
         logging.info(f"Saved relevant merged DF to {output_filename}")
 
+        # 4) Store in DB
         store_paper_data(relevant_df.to_dict("records"))
         store_query_data(user_query, sub_queries)
 
@@ -70,13 +80,11 @@ async def run_pipeline(user_query: str, parser_method: str, output_filename: str
         relevant_df = relevant_df[relevant_df["abstract"].notnull()]
         relevant_df = relevant_df[~relevant_df["DOI"].isin(existing_dois)]
 
-        # if "isOpenAccess" in relevant_df.columns:
-        #     relevant_df = relevant_df[relevant_df["isOpenAccess"] == True]
-
-        # unify PDF URLs from openAccessPdf or url
+        # 5) Download PDFs
         pdf_urls = unify_pdf_urls(relevant_df)
         await asyncio.to_thread(download_pdfs, pdf_urls, "pdfs", relevant_df)
 
+        # 6) Parse with chosen parser
         await asyncio.to_thread(parse_pdfs_in_directory, parser_method, "pdfs")
 
     finally:
@@ -86,7 +94,7 @@ def main():
     parser = argparse.ArgumentParser(description="Aggregator pipeline with multiple APIs and parser methods.")
     parser.add_argument("query", type=str, help="User's research query")
     parser.add_argument("--parser", type=str, default="unstructured",
-                        help="Which parser method to use. Options: 'unstructured' or 'pymupdf'")
+                        help="Which parser method to use: 'unstructured' or 'pymupdf'")
     parser.add_argument("--output", type=str, default="merged_results.pkl",
                         help="Output file for the final relevant DataFrame")
 

@@ -5,11 +5,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from typing import List
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv, find_dotenv
 import os
 import logging
 load_dotenv(find_dotenv())
-
 
 logging.basicConfig(filename='research_helper.log', level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(message)s')
@@ -24,8 +24,9 @@ gemini = ChatGoogleGenerativeAI(
     temperature=0,
 )
 
+openai = ChatOpenAI(model="gpt-4o-mini", temperature=0, api_key=os.getenv("OPENAI_API"))
 llama = ChatOllama(model="llama3.2:1b-instruct-q8_0",temperature=0)
-structured_llm = gemini.with_structured_output(Query)
+structured_llm = openai.with_structured_output(Query)
 
 system = """
 <role>
