@@ -47,24 +47,29 @@ def create_database():
         logging.exception(f"Error creating SQLite database: {e}")
 
 def store_paper_data(paper_data):
-    """
-    Stores paper data in the SQLite database.
-
-    Args:
-      paper_data: A list of dictionaries, where each dictionary contains the data for a paper.
-    """
     try:
         conn = sqlite3.connect("research_papers.db")
         cursor = conn.cursor()
 
         for paper in paper_data:
+            authors_list = paper.get('authors', [])
+            # Ensure it's a list
+            if authors_list is None:
+                authors_list = []
+            if isinstance(authors_list, str):
+                # If some code put a single string instead of a list
+                authors_list = [authors_list]
+
+            authors_str = ", ".join(authors_list)
+
             cursor.execute('''
-                INSERT OR IGNORE INTO papers (doi, title, authors, year, abstract, url, is_open_access, pdf_url, relevance_grade)
+                INSERT OR IGNORE INTO papers 
+                (doi, title, authors, year, abstract, url, is_open_access, pdf_url, relevance_grade)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 paper.get('DOI'),
                 paper.get('title'),
-                ", ".join(paper.get('authors',)),
+                authors_str,
                 paper.get('year'),
                 paper.get('abstract'),
                 paper.get('url'),
@@ -78,6 +83,7 @@ def store_paper_data(paper_data):
         logging.info("Paper data stored in SQLite database successfully.")
     except Exception as e:
         logging.exception(f"Error storing paper data in SQLite database: {e}")
+
 
 def store_query_data(original_query, sub_queries):
     """

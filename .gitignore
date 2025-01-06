@@ -17,3 +17,4 @@ __pycache__/
 *.csv
 tests/search_engines/crossref.ipynb
 __pycache__/
+parsed_pdfs_pymupdf
