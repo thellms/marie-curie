@@ -53,11 +53,15 @@ def store_paper_data(paper_data):
 
         for paper in paper_data:
             authors_obj = paper.get('authors', [])
-            # Ensure it's a list
+            logging.debug(f"DOI={paper.get('DOI')} authors_obj={authors_obj}, type={type(authors_obj)}")
+
             if authors_obj is None:
                 authors_obj = []
-            if isinstance(authors_obj, str):
+            elif isinstance(authors_obj, str):
                 authors_obj = [authors_obj]
+            elif not isinstance(authors_obj, (list, tuple)):
+                # Unexpected type, forcibly convert to string
+                authors_obj = [str(authors_obj)]
 
             authors_str = ", ".join(authors_obj)
 
@@ -81,7 +85,6 @@ def store_paper_data(paper_data):
         conn.commit()
         conn.close()
         logging.info("Paper data stored in SQLite database successfully.")
-
     except Exception as e:
         logging.exception(f"Error storing paper data in SQLite database: {e}")
 
