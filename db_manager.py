@@ -52,20 +52,20 @@ def store_paper_data(paper_data):
         cursor = conn.cursor()
 
         for paper in paper_data:
-            authors_list = paper.get('authors', [])
+            authors_obj = paper.get('authors', [])
             # Ensure it's a list
-            if authors_list is None:
-                authors_list = []
-            if isinstance(authors_list, str):
-                # If some code put a single string instead of a list
-                authors_list = [authors_list]
+            if authors_obj is None:
+                authors_obj = []
+            if isinstance(authors_obj, str):
+                authors_obj = [authors_obj]
 
-            authors_str = ", ".join(authors_list)
+            authors_str = ", ".join(authors_obj)
 
             cursor.execute('''
-                INSERT OR IGNORE INTO papers 
-                (doi, title, authors, year, abstract, url, is_open_access, pdf_url, relevance_grade)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT OR IGNORE INTO papers (
+                  doi, title, authors, year, abstract, url,
+                  is_open_access, pdf_url, relevance_grade
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 paper.get('DOI'),
                 paper.get('title'),
@@ -81,6 +81,7 @@ def store_paper_data(paper_data):
         conn.commit()
         conn.close()
         logging.info("Paper data stored in SQLite database successfully.")
+
     except Exception as e:
         logging.exception(f"Error storing paper data in SQLite database: {e}")
 
