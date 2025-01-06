@@ -5,7 +5,11 @@ import logging
 import pathlib
 import pymupdf4llm
 
-logging.basicConfig(...)
+logging.basicConfig(
+    filename='research_helper.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(message)s'
+)
 
 OUTPUT_DIR = "parsed_pdfs_pymupdf"
 

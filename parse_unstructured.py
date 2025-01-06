@@ -7,7 +7,11 @@ import unstructured_client
 from unstructured_client.models import operations, shared
 import pathlib
 
-logging.basicConfig(...)
+logging.basicConfig(
+    filename='research_helper.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(message)s'
+)
 
 OUTPUT_DIR = "parsed_pdfs_unstructured"
 

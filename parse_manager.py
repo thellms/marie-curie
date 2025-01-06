@@ -7,7 +7,11 @@ import glob
 from parse_unstructured import parse_pdf_unstructured, already_parsed_unstructured
 from parse_pymupdf import parse_pdf_pymupdf, already_parsed_pymupdf
 
-logging.basicConfig(...)
+logging.basicConfig(
+    filename='research_helper.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(message)s'
+)
 
 def parse_pdfs_in_directory(parser_method: str, directory="pdfs"):
     """

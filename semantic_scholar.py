@@ -3,9 +3,12 @@
 import requests
 import logging
 from typing import List, Dict
-from aggregator_utils import unify_pdf_urls  # optional if we want to unify URL extraction here
 
-logging.basicConfig(...)
+logging.basicConfig(
+    filename='research_helper.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(message)s'
+)
 
 API_BASE_URL = "http://api.semanticscholar.org/graph/v1/paper/search"
 

@@ -1,14 +1,13 @@
 # aggregator_utils.py
 
-import os
 import logging
-import json
 import pandas as pd
+from typing import List
 
-from paper_identifier import unify_doi
 from semantic_scholar import search_semantic_scholar_api
 from litmaps import search_litmaps
-from crossref import search_crossref 
+from crossref import search_crossref
+from paper_identifier import unify_doi
 
 logging.basicConfig(
     filename="research_helper.log",
@@ -43,29 +42,12 @@ def aggregate_subquery_results(query: str) -> pd.DataFrame:
     logging.info(f"aggregate_subquery_results -> got {len(combined_df)} items for '{query}' across 3 APIs")
     return combined_df
 
-
-def unify_pdf_urls(df: pd.DataFrame) -> list:
+def unify_final_df(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Extract URLs for PDFs from either 'openAccessPdf', or from 'url', or both.
-    Return a list of valid PDF URLs.
+    If you had a separate function to do any final cleaning or dedup logic,
+    you could keep it here. 
+    If you don't need it, remove or adapt as needed.
     """
-    pdf_urls = []
-
-    if "openAccessPdf" in df.columns:
-        # from semantic scholar
-        def _extract_s2_url(x):
-            if isinstance(x, dict):
-                return x.get("url")
-            return None
-        s2_urls = df["openAccessPdf"].apply(_extract_s2_url).dropna().tolist()
-        pdf_urls.extend(s2_urls)
-
-    # from litmaps (or fallback)
-    # Suppose we store the article's 'url' col
-    if "url" in df.columns:
-        fallback_urls = df["url"].dropna().tolist()
-        pdf_urls.extend(fallback_urls)
-
-    # remove duplicates or invalid
-    pdf_urls = list(set(u for u in pdf_urls if u and u.strip()))
-    return pdf_urls
+    # Example placeholder:
+    # This could do additional dedup logic or title-based fuzzy matching
+    return df

@@ -16,8 +16,9 @@ from grader import grade_paper
 from download_pdfs import download_pdfs
 from parse_manager import parse_pdfs_in_directory
 from aggregator_utils import aggregate_subquery_results, unify_final_df
-from dotenv import load_dotenv, find_dotenv
+from pdf_utils import unify_pdf_urls  # <-- import from pdf_utils, not aggregator_utils
 
+from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
 logging.basicConfig(
@@ -35,65 +36,51 @@ async def run_pipeline(user_query: str, parser_method: str, output_filename: str
       4) Grade (LLM), store in DB, skip duplicates
       5) Download + parse PDFs using the chosen parser method
     """
-    # 1) Decompose the user query
     results = query_chain.invoke({"query": user_query})
-    sub_queries = results.queries  # a list of sub-queries
+    sub_queries = results.queries  # list of sub-queries
 
-    # 2) Create DB if needed
     create_database()
     conn = sqlite3.connect("research_papers.db")
 
     try:
-        # 3) aggregator logic for each sub-query
         tasks = [aggregate_subquery_results(q) for q in sub_queries]
         dfs = await asyncio.gather(*tasks)
         merged_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
-        # 4) LLM grade
+        # optional final unify step
+        merged_df = unify_final_df(merged_df)
+
         logging.info("Grading papers for relevance...")
 
         def apply_grading(row):
             return grade_paper(user_query, row.get("abstract", ""), row.get("DOI", ""))
 
         merged_df["relevance_grade"] = merged_df.apply(apply_grading, axis=1)
-
-        # Filter relevant
         relevant_df = merged_df[merged_df["relevance_grade"] == True].copy()
         relevant_df.to_pickle(output_filename)
         logging.info(f"Saved relevant merged DF to {output_filename}")
 
-        # 5) Store in DB
         store_paper_data(relevant_df.to_dict("records"))
         store_query_data(user_query, sub_queries)
 
         existing_dois = get_existing_dois()
         conn.commit()
 
-        # Filter out existing or missing abstracts
+        # filter out existing or missing abstracts
         relevant_df = relevant_df[relevant_df["abstract"].notnull()]
         relevant_df = relevant_df[~relevant_df["DOI"].isin(existing_dois)]
 
-        # 6) Download PDFs
-        #   We'll guess if the data has "isOpenAccess" from semantic scholar. 
-        #   For litmaps, we might not have that col. We'll skip that check or do a fallback.
-        if "isOpenAccess" in relevant_df.columns:
-            relevant_df = relevant_df[relevant_df["isOpenAccess"] == True]
+        # if "isOpenAccess" in relevant_df.columns:
+        #     relevant_df = relevant_df[relevant_df["isOpenAccess"] == True]
 
-        # For semantic scholar, we might have 'openAccessPdf' col. For litmaps, we might have 'url'.
-        # We'll unify these in aggregator_utils if needed. For now, let's just check both.
-        # We'll define a function unify_pdf_urls below if we want.
-        from aggregator_utils import unify_pdf_urls
+        # unify PDF URLs from openAccessPdf or url
         pdf_urls = unify_pdf_urls(relevant_df)
-
         await asyncio.to_thread(download_pdfs, pdf_urls, "pdfs", relevant_df)
 
-        # 7) Parse with the chosen parser method
-        #   parse_pdfs_in_directory can be told which method to use
         await asyncio.to_thread(parse_pdfs_in_directory, parser_method, "pdfs")
 
     finally:
         conn.close()
-
 
 def main():
     parser = argparse.ArgumentParser(description="Aggregator pipeline with multiple APIs and parser methods.")
