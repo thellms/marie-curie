@@ -19,3 +19,7 @@ tests/search_engines/crossref.ipynb
 __pycache__/
 parsed_pdfs_pymupdf
 test.ipynb
+grag/
+nano-grag/
+temp.ipynb
+grag.py
